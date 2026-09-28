@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Runs the Say It Better backend quietly in the background and keeps it running: it starts at
+  login and restarts itself if it ever crashes. install.sh fills in the placeholders below
+  (__BACKEND_DIR__, __PYTHON__, __OAUTH_TOKEN__) and copies this into ~/Library/LaunchAgents/.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.sayitbetter.backend</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>__PYTHON__</string>
+		<string>-m</string>
+		<string>uvicorn</string>
+		<string>server:app</string>
+		<string>--host</string>
+		<string>0.0.0.0</string>
+		<string>--port</string>
+		<string>8765</string>
+	</array>
+
+	<key>WorkingDirectory</key>
+	<string>__BACKEND_DIR__</string>
+
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>CLAUDE_CODE_OAUTH_TOKEN</key>
+		<string>__OAUTH_TOKEN__</string>
+	</dict>
+
+	<!-- Start on login, and keep it running if it crashes (but not if you stop it yourself). -->
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+
+	<key>StandardOutPath</key>
+	<string>__BACKEND_DIR__/launchd/backend.log</string>
+	<key>StandardErrorPath</key>
+	<string>__BACKEND_DIR__/launchd/backend.log</string>
+</dict>
+</plist>

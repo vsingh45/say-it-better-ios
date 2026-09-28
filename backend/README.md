@@ -32,6 +32,29 @@ It's meant for your own devices. Don't distribute it or ship it through the App 
 
 Optional: set `SAYITBETTER_MODEL` to choose a specific model. Otherwise the Claude Code default is used.
 
+## Keep it running in the background (recommended)
+
+Running `uvicorn` in a terminal works, but it stops the moment you close the terminal, sleep the
+Mac deeply, or reboot. `launchd/` installs it as a background service instead: it starts
+automatically when you log in and restarts itself if it ever crashes, so it's just always there
+when you open the app — no terminal to remember to open first.
+
+```bash
+cd backend
+CLAUDE_CODE_OAUTH_TOKEN=<token from `claude setup-token`> ./launchd/install.sh
+```
+
+That's it — it's now running and will keep running across reboots. Useful commands:
+
+```bash
+curl http://localhost:8765/health          # check it's up
+tail -f launchd/backend.log                # see what it's doing
+./launchd/uninstall.sh                     # stop and remove it
+```
+
+If you ever refresh your OAuth token, re-run `install.sh` with the new one; it overwrites the old
+service in place.
+
 ## Point the app at it
 
 In the app, tap the gear icon, go to **Deep dive backend**, and enter:
