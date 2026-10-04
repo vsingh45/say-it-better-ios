@@ -3,6 +3,8 @@ import SwiftUI
 struct RootView: View {
     var body: some View {
         TabView {
+            FeedView()
+                .tabItem { Label("Feed", systemImage: "play.square.stack") }
             LearnView()
                 .tabItem { Label("Learn", systemImage: "rectangle.stack") }
             QuizView()
@@ -19,5 +21,5 @@ struct RootView: View {
     RootView()
         .environment(WordStore())
         .environment(DeepDiveService())
-        .modelContainer(for: QuizResult.self, inMemory: true)
+        .modelContainer(for: [QuizResult.self, KnownWord.self, DailyFeedCount.self, HeardWord.self], inMemory: true)
 }

@@ -34,12 +34,11 @@ struct SettingsView: View {
 
                 Section {
                     LabeledContent("Known words", value: "\(store.known.count) of \(store.words.count)")
-                    LabeledContent("iCloud sync", value: store.isCloudSyncAvailable ? "On" : "Off (this device only)")
                     Button("Reset progress", role: .destructive) { confirmingReset = true }
                 } header: {
                     Text("Progress")
                 } footer: {
-                    Text("Known words sync through your iCloud account. No sign-in beyond the device's own.")
+                    Text("Known words are saved on this device.")
                 }
             }
             .navigationTitle("Settings")

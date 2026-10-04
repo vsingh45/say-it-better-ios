@@ -34,6 +34,7 @@ struct MyWordsView: View {
             .background(Theme.background)
             .navigationTitle("My words")
             .settingsToolbar()
+            .heardSearch()
             .sheet(item: $deepDiveWord) { DeepDiveSheet(word: $0) }
         }
     }

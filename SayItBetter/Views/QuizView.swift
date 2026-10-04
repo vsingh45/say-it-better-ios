@@ -23,8 +23,8 @@ struct QuizView: View {
                         } else if questions.indices.contains(index) {
                             questionView(questions[index])
                         } else {
-                            ContentUnavailableView("Not enough words", systemImage: "questionmark.circle",
-                                                   description: Text("A quiz needs at least four words to choose from."))
+                            ContentUnavailableView("No known words yet", systemImage: "questionmark.circle",
+                                                   description: Text("Mark words as “I know this” in Learn or the Feed, then come back to quiz yourself on them."))
                         }
                     }
                     .padding()
@@ -43,6 +43,7 @@ struct QuizView: View {
                 }
             }
             .settingsToolbar()
+            .heardSearch()
             .onAppear {
                 if questions.isEmpty { newRound() }
             }
@@ -107,47 +108,16 @@ struct QuizView: View {
     }
 
     private func optionButton(_ option: Word, answer: Word) -> some View {
-        let isAnswer = option.word == answer.word
-        let isPicked = option.word == selected?.word
-        let answered = selected != nil
-
-        let tint: Color? = {
-            guard answered else { return nil }
-            if isAnswer { return .green }
-            if isPicked { return .red }
-            return nil
-        }()
-
-        return Button {
+        ChoiceButton(
+            title: option.word,
+            status: .init(isAnswer: option.word == answer.word,
+                          isPicked: option.word == selected?.word,
+                          answered: selected != nil)
+        ) {
             guard selected == nil else { return }
             selected = option
-            if isAnswer { score += 1 }
-        } label: {
-            HStack {
-                Text(option.word)
-                    .font(Theme.serif(.headline, weight: .medium))
-                Spacer()
-                if answered, isAnswer {
-                    Image(systemName: "checkmark.circle.fill")
-                } else if answered, isPicked {
-                    Image(systemName: "xmark.circle.fill")
-                }
-            }
-            .padding()
-            .frame(maxWidth: .infinity)
-            .foregroundStyle(tint ?? .primary)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(tint.map { $0.opacity(0.15) } ?? Theme.surface)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(tint ?? Theme.hairline, lineWidth: tint == nil ? 0.5 : 1.5)
-            )
-            .opacity(answered && tint == nil ? 0.55 : 1)
+            if option.word == answer.word { score += 1 }
         }
-        .buttonStyle(.plain)
-        .disabled(answered)
     }
 
     // MARK: - Results
@@ -197,7 +167,9 @@ struct QuizView: View {
     // MARK: - Flow
 
     private func newRound() {
-        questions = QuizBuilder.makeRound(pool: store.filteredWords, allWords: store.words)
+        // Quiz only the words the user has marked as known, within the chosen category.
+        let pool = store.knownWords.filter { store.categoryFilter == nil || $0.category == store.categoryFilter }
+        questions = QuizBuilder.makeRound(pool: pool, allWords: store.words)
         index = 0
         selected = nil
         score = 0

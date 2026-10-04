@@ -53,6 +53,7 @@ struct PhraseChips: View {
             ForEach(phrases, id: \.self) { phrase in
                 Text(phrase)
                     .font(.subheadline)
+                    .lineLimit(1)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.accentColor.opacity(0.1), in: Capsule())
