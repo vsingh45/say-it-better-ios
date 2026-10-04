@@ -1,7 +1,7 @@
 import Foundation
 
 /// The in-depth explanation shown in the Deep dive sheet. The same shape comes from the
-/// bundled `deepdive.json` and from the personal backend, so decoding is lenient: a live
+/// bundled `deepdive.json` and from the on-device model, so decoding is lenient: a live
 /// response that omits a field still renders.
 struct DeepDive: Codable, Equatable {
     struct FamilyMember: Codable, Hashable {
@@ -31,6 +31,22 @@ struct DeepDive: Codable, Equatable {
     var examples: [Example]
     var tip: String
 
+    init(word: String, pronunciation: String = "", partOfSpeech: String = "", meaning: String = "",
+         origin: String = "", family: [FamilyMember] = [], collocations: [String] = [],
+         compare: [Comparison] = [], mistake: String = "", examples: [Example] = [], tip: String = "") {
+        self.word = word
+        self.pronunciation = pronunciation
+        self.partOfSpeech = partOfSpeech
+        self.meaning = meaning
+        self.origin = origin
+        self.family = family
+        self.collocations = collocations
+        self.compare = compare
+        self.mistake = mistake
+        self.examples = examples
+        self.tip = tip
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         word = try c.decode(String.self, forKey: .word)
@@ -47,7 +63,7 @@ struct DeepDive: Codable, Equatable {
     }
 }
 
-/// Feedback on a sentence the user wrote with the word, from the backend's `/checkSentence`.
+/// Feedback on a sentence the user wrote with the word, written on the iPhone.
 struct SentenceFeedback: Codable, Equatable {
     /// "good", "almost" or "off".
     var verdict: String

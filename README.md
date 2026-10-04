@@ -35,29 +35,20 @@ Requirements: Xcode 16+, iOS 17+ simulator or device.
 SayItBetter/
   App/            SayItBetterApp (SwiftData container, environment), RootView (tab bar)
   Models/         Word (+ loader, example-sentence parsing), DeepDive, QuizResult (@Model)
-  Store/          WordStore (@Observable: words, known set, shared category filter)
-                  KnownWordsSync (UserDefaults + iCloud Key-Value Store)
-  Services/       DeepDiveService (live backend → bundled fallback), QuizBuilder, Speaker, ReferenceLinks
-  Views/          LearnView, QuizView, MyWordsView, AllWordsView, DeepDiveSheet, SettingsView, Components/
+  Store/          WordStore (@Observable: words, known set, shared category filter), FeedSession
+  Services/       DeepDiveService (bundled deep dives), OnDeviceLookup (Apple's on-device model),
+                  FeedBuilder, QuizBuilder, Speaker, ReferenceLinks
+  Views/          Feed/, LearnView, QuizView, MyWordsView, AllWordsView, HeardWordsView, DeepDiveSheet,
+                  SettingsView, Components/
   Resources/      words.json (the 40 words), deepdive.json (pre-generated deep dives)
-backend/          Optional personal server: Claude Agent SDK + FastAPI
 ```
 
 - **Content is data.** To add words, append entries to `Resources/words.json` using the same shape.
   Wrap the target word in the `example` in `[brackets]`. Add a matching entry to `deepdive.json`, or
-  let the backend generate it live.
-- **Known words** live in `UserDefaults` for instant reads and are mirrored to
-  `NSUbiquitousKeyValueStore`, so they follow your iCloud account across devices. If iCloud isn't
-  available, sync turns off silently.
-- **Quiz history** is stored with SwiftData.
-- **Deep dive** first shows the bundled content right away. If a backend URL is set in Settings
-  (gear icon) and the backend answers, the live version from Claude replaces it. Sentence feedback
-  needs the backend. Offline, the app only checks that you used the word.
+  look the word up from search to have it written on the iPhone.
+- **Known words, Feed progress, quiz history and heard words** are stored with SwiftData, on the device.
+- **Deep dive** first shows the bundled content right away. When the iPhone can run Apple's on-device
+  model, a fuller version replaces it. Sentence feedback is also written on the device. Without the
+  model, the app only checks that you used the word.
+- **Word lookup** (search) uses the on-device model. It needs iOS 26 or later and Apple Intelligence.
 
-## Live Deep dive with your Claude subscription (optional)
-
-iOS apps can't sign in with a Claude Pro/Max subscription directly. Instead, `backend/` runs a small
-server on your Mac that uses the **Claude Agent SDK** with your own Claude Code login. See
-[`backend/README.md`](backend/README.md) for setup, then enter `http://<your-mac>.local:8765` (or
-your Tailscale address) in the app's Settings. This setup is for your own devices only, not for
-App Store distribution.

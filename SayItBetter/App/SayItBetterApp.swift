@@ -21,7 +21,6 @@ struct SayItBetterApp: App {
             RootView()
                 .environment(store)
                 .environment(deepDives)
-                .task { await deepDives.checkReachability() }
         }
         .modelContainer(container)
     }

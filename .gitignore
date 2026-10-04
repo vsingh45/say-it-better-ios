@@ -1,5 +1,3 @@
 xcuserdata/
 *.xcuserstate
 DerivedData/
-backend/.venv/
-backend/launchd/backend.log

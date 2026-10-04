@@ -17,8 +17,10 @@ struct DeepDiveSheet: View {
                     header
                     if loading {
                         HStack(spacing: 10) {
-                            ProgressView()
-                            Text(content == nil ? "Loading…" : "Checking your backend for a live version…")
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(Color.accentColor)
+                                .symbolEffect(.pulse)
+                            Text("Loading the deep dive…")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -26,7 +28,7 @@ struct DeepDiveSheet: View {
                     if let content {
                         DeepDiveContent(content: content)
                     } else if !loading {
-                        Text("No deep dive is available for this word yet. Start your backend (see Settings) to generate one live.")
+                        Text("No deep dive is available for this word yet. Look it up from search to generate one on this iPhone.")
                             .foregroundStyle(.secondary)
                             .card()
                     }
@@ -59,11 +61,10 @@ struct DeepDiveSheet: View {
             Text("\(content?.pronunciation.nonEmpty ?? word.pronunciation) · \(content?.partOfSpeech.nonEmpty ?? word.partOfSpeech)")
                 .font(Theme.mono)
                 .foregroundStyle(.secondary)
-            if let source {
-                Label(source == .live ? "Live from your backend" : "Offline · bundled content",
-                      systemImage: source == .live ? "bolt.horizontal.circle" : "internaldrive")
+            if source == .bundled {
+                Label("Offline · bundled content", systemImage: "internaldrive")
                     .font(Theme.monoSmall)
-                    .foregroundStyle(source == .live ? Color.accentColor : .secondary)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -85,16 +86,22 @@ struct DeepDiveSheet: View {
     }
 
     private func load() async {
-        // Show bundled content immediately, then upgrade to live content if the backend answers.
-        if let bundled = service.bundledDeepDive(for: word.word) {
+        // Write the explanation on the iPhone first; show the bundled one only if that isn't possible.
+        let bundled = service.bundledDeepDive(for: word.word)
+        guard OnDeviceLookup.isAvailable else {
+            content = bundled
+            source = bundled == nil ? nil : .bundled
+            loading = false
+            return
+        }
+
+        loading = true
+        if let written = try? await OnDeviceLookup.deepDive(for: word.word) {
+            content = written
+            source = .live
+        } else if let bundled {
             content = bundled
             source = .bundled
-            loading = service.backendURL != nil
-        }
-        let result = await service.deepDive(for: word.word)
-        if let result {
-            content = result.0
-            source = result.1
         }
         loading = false
     }
@@ -179,8 +186,8 @@ private struct DeepDiveContent: View {
     }
 }
 
-/// "Write your own sentence, get feedback." Needs the live backend; offline it only checks
-/// that the word was actually used.
+/// "Write your own sentence, get feedback." Written on this iPhone with Apple Intelligence; without it,
+/// it only checks that the word was actually used.
 private struct SentenceCoach: View {
     let word: Word
 
@@ -239,13 +246,13 @@ private struct SentenceCoach: View {
         defer { checking = false }
 
         do {
-            feedback = try await service.checkSentence(text, word: word.word)
+            feedback = try await OnDeviceLookup.checkSentence(text, word: word.word)
         } catch {
-            // Offline fallback: the one check we can do honestly without a model.
+            // Fallback when the model isn't available: the one check we can do honestly without it.
             if word.isUsed(in: text) {
-                errorMessage = "You used “\(word.word)”. Detailed feedback needs your backend: \(error.localizedDescription)"
+                errorMessage = "You used “\(word.word)”. Detailed feedback needs Apple Intelligence: \(error.localizedDescription)"
             } else {
-                errorMessage = "“\(word.word)” doesn't appear in your sentence yet. (Detailed feedback needs your backend.)"
+                errorMessage = "“\(word.word)” doesn't appear in your sentence yet. (Detailed feedback needs Apple Intelligence.)"
             }
         }
     }
