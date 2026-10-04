@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// The example sentence with the `[target]` span emphasised in the accent colour.
 struct HighlightedExample: View {
@@ -133,4 +134,142 @@ struct SettingsToolbar: ViewModifier {
 
 extension View {
     func settingsToolbar() -> some View { modifier(SettingsToolbar()) }
+    func heardSearch() -> some View { modifier(HeardSearch()) }
+}
+
+/// The search bar at the top of every tab. Results appear below it; saving a term adds it to "Heard & read".
+struct HeardSearch: ViewModifier {
+    @Environment(WordStore.self) private var store
+
+    func body(content: Content) -> some View {
+        @Bindable var store = store
+        content
+            .searchable(text: $store.searchText, placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: "A word you heard or read")
+            .overlay(alignment: .top) {
+                if !store.searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    SearchResultsPanel(query: store.searchText.trimmingCharacters(in: .whitespaces))
+                }
+            }
+    }
+}
+
+/// Matching words from the list, an "ask the agent" row for any word, and a row to save whatever was typed.
+private struct SearchResultsPanel: View {
+    let query: String
+
+    @Environment(WordStore.self) private var store
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \HeardWord.date, order: .reverse) private var heard: [HeardWord]
+
+    @State private var lookingUp = false
+    @State private var lookupError: String?
+    @State private var card: Word?
+
+    private var matches: [Word] {
+        store.words.filter {
+            $0.word.localizedCaseInsensitiveContains(query) || $0.definition.localizedCaseInsensitiveContains(query)
+        }
+        .prefix(10).map { $0 }
+    }
+
+    private func isSaved(_ term: String) -> Bool {
+        heard.contains { $0.term.caseInsensitiveCompare(term) == .orderedSame }
+    }
+
+    private func save(_ term: String) {
+        guard !isSaved(term) else { return }
+        modelContext.insert(HeardWord(term: term, category: HeardWord.category(for: term, in: store.words)))
+        try? modelContext.save()
+    }
+
+    /// Saves the term with its card, updating the card if the term was already saved.
+    private func saveCard(_ word: Word) {
+        if let existing = heard.first(where: { $0.term.caseInsensitiveCompare(query) == .orderedSame }) {
+            existing.store(word)
+        } else {
+            let item = HeardWord(term: query, category: HeardWord.category(for: query, in: store.words))
+            item.store(word)
+            modelContext.insert(item)
+        }
+        try? modelContext.save()
+    }
+
+    /// Asks the agent for a card, shows it, and saves the term with its card under "Heard & read".
+    private func lookUp() {
+        lookingUp = true
+        lookupError = nil
+        Task {
+            do {
+                let word = try await OnDeviceLookup.lookup(query)
+                saveCard(word)
+                card = word
+            } catch {
+                lookupError = error.localizedDescription
+            }
+            lookingUp = false
+        }
+    }
+
+    var body: some View {
+        List {
+            Section {
+                Button {
+                    lookUp()
+                } label: {
+                    HStack {
+                        Label("Get a card for “\(query)”", systemImage: "sparkles")
+                        Spacer()
+                        if lookingUp { ProgressView() }
+                    }
+                }
+                .disabled(lookingUp)
+                if let lookupError {
+                    Text(lookupError)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Ask the agent")
+            }
+
+            Section {
+                ForEach(matches) { word in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(word.word).font(Theme.serif(.headline))
+                        Text(word.definition)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                }
+                if matches.isEmpty {
+                    Text("No match in your word list.")
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Results for “\(query)”")
+            }
+        }
+        .listStyle(.insetGrouped)
+        .background(Theme.background)
+        .sheet(item: $card) { SearchedWordCard(word: $0) }
+    }
+}
+
+/// A searched word shown the same way as a Feed word card.
+struct SearchedWordCard: View {
+    let word: Word
+    @State private var session = FeedSession()
+
+    var body: some View {
+        NavigationStack {
+            FeedPage(kind: .wordCard) {
+                WordCardPost(word: word, session: session)
+            }
+            .navigationTitle("Searched word")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDragIndicator(.visible)
+    }
 }

@@ -25,7 +25,7 @@ final class DeepDiveService {
         var errorDescription: String? {
             switch self {
             case .noBackend:
-                return "Sentence feedback needs your backend running. Set its URL in Settings."
+                return "This needs your backend running. Set its URL in Settings."
             case .badResponse(let status):
                 return "The backend answered with HTTP \(status)."
             }

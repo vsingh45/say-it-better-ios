@@ -3,8 +3,18 @@ import SwiftData
 
 @main
 struct SayItBetterApp: App {
-    @State private var store = WordStore()
+    private let container: ModelContainer
+    @State private var store: WordStore
     @State private var deepDives = DeepDiveService()
+
+    init() {
+        do {
+            container = try ModelContainer(for: QuizResult.self, KnownWord.self, DailyFeedCount.self, HeardWord.self)
+        } catch {
+            fatalError("Could not create the SwiftData store: \(error)")
+        }
+        _store = State(initialValue: WordStore(context: container.mainContext))
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -13,6 +23,6 @@ struct SayItBetterApp: App {
                 .environment(deepDives)
                 .task { await deepDives.checkReachability() }
         }
-        .modelContainer(for: QuizResult.self)
+        .modelContainer(container)
     }
 }

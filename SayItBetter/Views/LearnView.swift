@@ -42,6 +42,7 @@ struct LearnView: View {
                 }
             }
             .settingsToolbar()
+            .heardSearch()
             .sheet(item: $deepDiveWord) { DeepDiveSheet(word: $0) }
             .onAppear {
                 if !started { startRound() }

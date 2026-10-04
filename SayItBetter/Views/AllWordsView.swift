@@ -1,12 +1,19 @@
 import SwiftUI
+import SwiftData
 
 struct AllWordsView: View {
     @Environment(WordStore.self) private var store
-    @State private var searchText = ""
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \HeardWord.date, order: .reverse) private var heard: [HeardWord]
     @State private var deepDiveWord: Word?
 
+    private var trimmedQuery: String {
+        store.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+
     private var results: [Word] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = store.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return store.filteredWords }
         return store.filteredWords.filter {
             $0.word.localizedCaseInsensitiveContains(query)
@@ -18,7 +25,26 @@ struct AllWordsView: View {
     var body: some View {
         NavigationStack {
             List {
+                if trimmedQuery.isEmpty, !heard.isEmpty {
+                    Section {
+                        NavigationLink {
+                            HeardWordsView()
+                        } label: {
+                            HStack {
+                                Label("Heard & read", systemImage: "ear")
+                                Spacer()
+                                Text("\(heard.count) saved")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+
                 Section {
+                    if results.isEmpty, !trimmedQuery.isEmpty {
+                        Text("No match in your word list. Press search to save it under Heard & read.")
+                            .foregroundStyle(.secondary)
+                    }
                     ForEach(results) { word in
                         AllWordRow(
                             word: word,
@@ -39,14 +65,9 @@ struct AllWordsView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .overlay {
-                if results.isEmpty {
-                    ContentUnavailableView.search(text: searchText)
-                }
-            }
-            .searchable(text: $searchText, prompt: "Word, meaning, or what you'd say instead")
             .navigationTitle("All words")
             .settingsToolbar()
+            .heardSearch()
             .sheet(item: $deepDiveWord) { DeepDiveSheet(word: $0) }
         }
     }
